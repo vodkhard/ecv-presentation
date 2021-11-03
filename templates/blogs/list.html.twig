@@ -1,0 +1,13 @@
+{% extends "base.html.twig" %}
+
+{% block body %}
+  Liste des blogs: <br>
+
+  <ul>
+  {% for blog in blogs %}
+    <li>
+      <a href="{{ url("blog_show",{id: blog.id}) }}">{{blog.title}}</a>
+    </li>
+  {% endfor %}
+  </ul>
+{% endblock %}
