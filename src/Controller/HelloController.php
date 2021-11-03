@@ -3,6 +3,10 @@
 namespace App\Controller;
 
 use App\Entity\Blog;
+use App\Form\BlogType;
+use App\Repository\BlogRepository;
+use App\Services\Blogs;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
@@ -12,22 +16,17 @@ class HelloController extends AbstractController
     /**
      * @Route("/blogs/create", methods={"GET", "POST"})
      */
-    public function create(Request $request)
+    public function create(Request $request, Blogs $blogsService)
     {
         $blog = new Blog();
 
-        $form = $this->createFormBuilder($blog)
-            ->add('title')
-            ->add('content')
-            ->add('image')
-            ->getForm();
+        $form = $this->createForm(BlogType::class, $blog);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $doctrine = $this->getDoctrine();
-            $manager = $doctrine->getManager();
-            $manager->persist($blog);
-            $manager->flush();
+            $blogsService->create($blog);
+
+            return $this->redirectToRoute('blogs_list');
         }
 
         return $this->render('blogs/create.html.twig', [
@@ -36,13 +35,11 @@ class HelloController extends AbstractController
     }
 
     /**
-     * @Route("/blogs")
+     * @Route("/blogs", name="blogs_list", methods={"GET"})
      */
-    public function list()
+    public function list(BlogRepository $blogRepository)
     {
-        $doctrine = $this->getDoctrine();
-        $repository = $doctrine->getRepository(Blog::class);
-        $blogs = $repository->findAll();
+        $blogs = $blogRepository->findAll();
 
         return $this->render('blogs/list.html.twig', [
             'blogs' => $blogs,
@@ -52,12 +49,8 @@ class HelloController extends AbstractController
     /**
      * @Route("/blogs/{id}", name="blog_show", requirements={"id"="\d+"})
      */
-    public function show(int $id)
+    public function show(Blog $blog)
     {
-        $doctrine = $this->getDoctrine();
-        $repository = $doctrine->getRepository(Blog::class);
-        $blog = $repository->find($id);
-
         return $this->render('blogs/show.html.twig', [
             'blog' => $blog,
         ]);
@@ -66,23 +59,16 @@ class HelloController extends AbstractController
     /**
      * @Route("/blogs/{id}/edit", name="blog_edit", requirements={"id"="\d+"}, methods={"GET", "POST"})
      */
-    public function edit(Request $request, int $id)
-    {
-        $doctrine = $this->getDoctrine();
-        $repository = $doctrine->getRepository(Blog::class);
-        $blog = $repository->find($id);
-
-        $form = $this->createFormBuilder($blog)
-            ->add('title')
-            ->add('content')
-            ->add('image')
-            ->getForm();
+    public function edit(
+        Blog $blog,
+        Request $request,
+        EntityManagerInterface $em
+    ) {
+        $form = $this->createForm(BlogType::class, $blog);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $doctrine = $this->getDoctrine();
-            $manager = $doctrine->getManager();
-            $manager->flush();
+            $em->flush();
 
             return $this->redirectToRoute('blog_show', ['id' => $blog->getId()]);
         }
